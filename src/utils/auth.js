@@ -9,7 +9,11 @@ export function saveSession({ token, user }) {
 }
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  return (
+    localStorage.getItem(TOKEN_KEY) ||
+    localStorage.getItem("token") ||
+    localStorage.getItem("accessToken")
+  );
 }
 
 export function getCurrentUser() {

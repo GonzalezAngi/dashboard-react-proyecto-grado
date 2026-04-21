@@ -44,6 +44,13 @@ import TableChartIcon from "@mui/icons-material/TableChart";
 import html2canvas from "html2canvas";
 import * as XLSX from "xlsx";
 
+const EXPORT_COLUMN_LABELS = {
+  name: "nombre",
+  count: "cantidad",
+  month: "mes",
+  range: "rango",
+};
+
 // Material Dashboard 2 React example components
 import SidenavCollapse from "examples/Sidenav/SidenavCollapse";
 
@@ -111,6 +118,16 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
     } = getExportData();
 
     const workbook = XLSX.utils.book_new();
+
+    const translateRows = (rows) =>
+      rows.map((row) =>
+        Object.entries(row).reduce((accumulator, [key, value]) => {
+          const translatedKey = EXPORT_COLUMN_LABELS[key] || key;
+          accumulator[translatedKey] = value;
+          return accumulator;
+        }, {})
+      );
+
     [
       ["Especialidades", specialties],
       ["Barrios", neighborhoods],
@@ -121,7 +138,8 @@ function Sidenav({ color, brand, brandName, routes, ...rest }) {
       ["Tipo_consulta", consultationTypes],
       ["Enfermedades", diseases],
     ].forEach(([sheetName, data]) => {
-      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(data), sheetName);
+      const translatedData = translateRows(data);
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(translatedData), sheetName);
     });
 
     XLSX.writeFile(workbook, `medihome-dashboard-${new Date().toISOString().slice(0, 10)}.xlsx`);

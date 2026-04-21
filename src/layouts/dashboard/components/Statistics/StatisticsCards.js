@@ -51,6 +51,54 @@ ChartJS.register(
   Legend
 );
 
+const barValueLabelsPlugin = {
+  id: "barValueLabelsPlugin",
+  afterDatasetsDraw(chart, args, options) {
+    const { ctx, chartArea } = chart;
+    const isHorizontal = chart.options?.indexAxis === "y";
+
+    ctx.save();
+    ctx.font = "600 11px Roboto, Helvetica, Arial, sans-serif";
+    ctx.fillStyle = options?.color || "#1f2937";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      const meta = chart.getDatasetMeta(datasetIndex);
+
+      if (meta.type !== "bar" || meta.hidden) {
+        return;
+      }
+
+      meta.data.forEach((element, index) => {
+        const value = dataset.data?.[index];
+        if (value === null || value === undefined || value === "" || Number(value) <= 0) {
+          return;
+        }
+
+        const position = element.tooltipPosition();
+        const text = String(value);
+        const textWidth = ctx.measureText(text).width;
+
+        if (isHorizontal) {
+          const padding = 8;
+          const { x, y, base } = element.getProps(["x", "y", "base"], true);
+          const labelX = Math.max(x - padding - textWidth / 2, base + textWidth / 2 + 4);
+          const labelY = y;
+          ctx.fillText(text, labelX, labelY);
+          return;
+        }
+
+        const { x, y } = element.getProps(["x", "y"], true);
+        const labelY = y + 12;
+        const labelX = x;
+        ctx.fillText(text, labelX, labelY);
+      });
+    });
+
+    ctx.restore();
+  },
+};
 const CARD_THEMES = {
   specialties: { top: "#2b6cb0", bottom: "#edf5ff", border: "rgba(43, 108, 176, 0.18)" },
   neighborhoods: { top: "#2c7a7b", bottom: "#eefaf9", border: "rgba(44, 122, 123, 0.18)" },
@@ -242,6 +290,7 @@ function StatisticsCards({
             ],
           }}
           options={{ indexAxis: "y", responsive: true, maintainAspectRatio: false }}
+          plugins={[barValueLabelsPlugin]}
         />
       </ChartCard>
 
@@ -338,6 +387,7 @@ function StatisticsCards({
             ],
           }}
           options={{ responsive: true, maintainAspectRatio: false }}
+          plugins={[barValueLabelsPlugin]}
         />
       </ChartCard>
 
@@ -364,6 +414,7 @@ function StatisticsCards({
               },
             ],
           }}
+          plugins={[barValueLabelsPlugin]}
           options={{
             responsive: true,
             maintainAspectRatio: false,
@@ -403,6 +454,7 @@ function StatisticsCards({
             ],
           }}
           options={{ indexAxis: "y", responsive: true, maintainAspectRatio: false }}
+          plugins={[barValueLabelsPlugin]}
         />
       </ChartCard>
 

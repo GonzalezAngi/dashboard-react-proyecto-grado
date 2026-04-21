@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
@@ -9,12 +9,6 @@ import Footer from "examples/Footer";
 
 // Componente de estadísticas
 import StatisticsCards from "./components/Statistics/StatisticsCards.js";
-
-const specialties = [
-  { name: "Cardiología", count: 6 },
-  { name: "Pediatría", count: 8 },
-  { name: "Odontología", count: 2 },
-];
 
 const neighborhoods = [
   { name: "Centro", count: 50 },
@@ -81,6 +75,41 @@ const diseases = [
 ];
 
 function Dashboard() {
+  const [specialties, setSpecialties] = useState([]);
+  const [specialtiesError, setSpecialtiesError] = useState("");
+
+  const apiBaseUrl = useMemo(() => process.env.REACT_APP_API_URL || "", []);
+
+  useEffect(() => {
+    const fetchTopSpecialties = async () => {
+      try {
+        setSpecialtiesError("");
+        const response = await fetch(`${apiBaseUrl}/especialidad/v1/mas-solicitadas`);
+
+        if (!response.ok) {
+          throw new Error(`No se pudo consultar especialidades (HTTP ${response.status}).`);
+        }
+
+        const payload = await response.json();
+        const normalized = Array.isArray(payload)
+          ? payload
+              .map((item) => ({
+                name: item?.nombre || "Sin nombre",
+                count: Number(item?.cantidadSolicitudes) || 0,
+              }))
+              .filter((item) => item.name)
+          : [];
+
+        setSpecialties(normalized);
+      } catch (error) {
+        setSpecialties([]);
+        setSpecialtiesError(error?.message || "Error al cargar especialidades.");
+      }
+    };
+
+    fetchTopSpecialties();
+  }, [apiBaseUrl]);
+
   useEffect(() => {
     window.__MEDIHOME_EXPORT_DATA__ = {
       specialties,
@@ -96,7 +125,7 @@ function Dashboard() {
     return () => {
       window.__MEDIHOME_EXPORT_DATA__ = null;
     };
-  }, []);
+  }, [specialties]);
 
   return (
     <DashboardLayout>
@@ -110,6 +139,11 @@ function Dashboard() {
             <MDTypography variant="body2" color="text">
               Analitica general de la plataforma MediHome
             </MDTypography>
+            {specialtiesError ? (
+              <MDTypography variant="button" color="error" fontWeight="regular" mt={1}>
+                {specialtiesError}
+              </MDTypography>
+            ) : null}
           </MDBox>
         </MDBox>
 

@@ -145,7 +145,7 @@ function SignIn() {
           <MDBox
             sx={{
               background: "linear-gradient(135deg, #1A73E8 0%, #0d47a1 100%)",
-              py: 4,
+              py: 4.5,
               px: 3,
               display: "flex",
               flexDirection: "column",
@@ -157,27 +157,17 @@ function SignIn() {
               src={medihomeLogo}
               alt="MediHome Logo"
               sx={{
-                width: "80px",
-                height: "80px",
+                width: { xs: "120px", sm: "132px" },
+                height: "auto",
                 objectFit: "contain",
-                mb: 1.5,
-                filter: "brightness(0) invert(1)",
+                mb: 1.25,
               }}
             />
-            <MDTypography
-              variant="h4"
-              fontWeight="bold"
-              color="white"
-              textAlign="center"
-              sx={{ lineHeight: 1.2 }}
-            >
-              MediHome
-            </MDTypography>
             <MDTypography
               variant="body2"
               color="white"
               textAlign="center"
-              sx={{ opacity: 0.85, mt: 0.5 }}
+              sx={{ opacity: 0.9, mt: 0.25 }}
             >
               Bienvenido, inicia sesión para continuar
             </MDTypography>
@@ -202,7 +192,7 @@ function SignIn() {
               </MDBox>
             )}
 
-            {/* Campo identificacion */}
+            {/* Campo identificación */}
             <MDBox mb={3}>
               <MDTypography
                 variant="caption"
@@ -211,11 +201,10 @@ function SignIn() {
                 mb={0.5}
                 display="block"
               >
-                IDENTIFICACION
+                IDENTIFICACIÓN
               </MDTypography>
               <MDInput
                 type="text"
-                placeholder="12345678"
                 fullWidth
                 value={identificacion}
                 onChange={(e) => setIdentificacion(e.target.value)}
@@ -238,6 +227,8 @@ function SignIn() {
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 fullWidth
+                autoComplete="new-password"
+                name="login-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -281,7 +272,7 @@ function SignIn() {
 
             <MDBox mt={3} textAlign="center">
               <MDTypography variant="caption" color="secondary">
-                Inicia con identificacion y contrasena
+                Inicia con identificación y contraseña
               </MDTypography>
             </MDBox>
           </MDBox>

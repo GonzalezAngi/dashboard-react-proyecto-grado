@@ -16,7 +16,7 @@ Coded by www.creative-tim.com
 import { useState, useEffect } from "react";
 
 // react-router components
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 // prop-types is a library for typechecking of props.
 import PropTypes from "prop-types";
@@ -28,12 +28,11 @@ import IconButton from "@mui/material/IconButton";
 import Icon from "@mui/material/Icon";
 import Tooltip from "@mui/material/Tooltip";
 import LogoutIcon from "@mui/icons-material/Logout";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import MDTypography from "components/MDTypography";
 
 // Material Dashboard 2 React components
 import MDBox from "components/MDBox";
-
-// Material Dashboard 2 React example components
-import Breadcrumbs from "examples/Breadcrumbs";
 
 // Custom styles for DashboardNavbar
 import {
@@ -45,14 +44,22 @@ import {
 
 // Material Dashboard 2 React context
 import { useMaterialUIController, setTransparentNavbar, setOpenConfigurator } from "context";
-import { clearSession } from "utils/auth";
+import { clearSession, getCurrentUser } from "utils/auth";
 
 function DashboardNavbar({ absolute, light, isMini }) {
   const [navbarType, setNavbarType] = useState();
   const navigate = useNavigate();
   const [controller, dispatch] = useMaterialUIController();
   const { transparentNavbar, fixedNavbar, darkMode, openConfigurator } = controller;
-  const route = useLocation().pathname.split("/").slice(1);
+  const currentUser = getCurrentUser();
+  const userType =
+    currentUser?.tipoUsuario ||
+    currentUser?.tipo_usuario ||
+    currentUser?.tipoDeUsuario ||
+    currentUser?.userType ||
+    currentUser?.role ||
+    currentUser?.rol ||
+    "Tipo de usuario";
 
   useEffect(() => {
     // Setting the navbar type
@@ -111,9 +118,7 @@ function DashboardNavbar({ absolute, light, isMini }) {
       sx={(theme) => navbar(theme, { transparentNavbar, absolute, light, darkMode })}
     >
       <Toolbar sx={(theme) => navbarContainer(theme)}>
-        <MDBox color="inherit" mb={{ xs: 1, md: 0 }} sx={(theme) => navbarRow(theme, { isMini })}>
-          <Breadcrumbs icon="home" title={route[route.length - 1]} route={route} light={light} />
-        </MDBox>
+        <MDBox sx={{ flexGrow: 1 }} />
         {isMini ? null : (
           <MDBox sx={(theme) => navbarRow(theme, { isMini })}>
             <MDBox color={light ? "white" : "inherit"} display="flex" alignItems="center" gap={0.5}>
@@ -140,6 +145,32 @@ function DashboardNavbar({ absolute, light, isMini }) {
                   <LogoutIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
+              <MDBox
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                justifyContent="flex-start"
+                ml={1}
+                lineHeight={1}
+                sx={{ minWidth: 88 }}
+              >
+                <IconButton
+                  size="small"
+                  disableRipple
+                  color="inherit"
+                  sx={{ ...navbarIconButton, p: 0.25 }}
+                >
+                  <AccountCircleIcon sx={{ color: "#2f86c7", fontSize: 30 }} />
+                </IconButton>
+                <MDTypography
+                  variant="caption"
+                  color="inherit"
+                  textAlign="center"
+                  sx={{ mt: 0.1, fontWeight: 700, maxWidth: 110, lineHeight: 1.1 }}
+                >
+                  {userType}
+                </MDTypography>
+              </MDBox>
             </MDBox>
           </MDBox>
         )}
