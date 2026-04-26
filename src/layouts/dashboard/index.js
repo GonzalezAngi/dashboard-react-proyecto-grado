@@ -6,15 +6,39 @@ import MDTypography from "components/MDTypography";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
+import { getToken } from "utils/auth";
 
-// Componente de estadísticas
+// Componente de estadisticas
 import StatisticsCards from "./components/Statistics/StatisticsCards.js";
 
-const neighborhoods = [
-  { name: "Centro", count: 50 },
-  { name: "Norte", count: 35 },
-  { name: "Sur", count: 20 },
+const MAX_NEIGHBORHOODS = 8;
+const MONTH_LABELS = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
 ];
+
+const cleanNeighborhoodName = (rawValue) => {
+  if (!rawValue) return "Sin barrio";
+
+  let value = String(rawValue).trim().replace(/\s+/g, " ");
+
+  // Drop noisy query fragments and keep a short human-friendly label.
+  if (value.includes("?")) value = value.split("?")[0];
+  if (value.includes(",")) value = value.split(",")[0];
+  if (value.length > 24) value = `${value.slice(0, 21)}...`;
+
+  return value || "Sin barrio";
+};
 
 const monthlyUsers = [
   { month: "Enero", count: 12 },
@@ -29,21 +53,6 @@ const monthlyUsers = [
   { month: "Octubre", count: 32 },
   { month: "Noviembre", count: 36 },
   { month: "Diciembre", count: 40 },
-];
-
-const appointmentsPerMonth = [
-  { month: "Enero", count: 120 },
-  { month: "Febrero", count: 135 },
-  { month: "Marzo", count: 142 },
-  { month: "Abril", count: 160 },
-  { month: "Mayo", count: 148 },
-  { month: "Junio", count: 170 },
-  { month: "Julio", count: 176 },
-  { month: "Agosto", count: 185 },
-  { month: "Septiembre", count: 172 },
-  { month: "Octubre", count: 190 },
-  { month: "Noviembre", count: 205 },
-  { month: "Diciembre", count: 212 },
 ];
 
 const ages = [
@@ -70,15 +79,19 @@ const consultationTypes = [
 const diseases = [
   { name: "Gripe", count: 25 },
   { name: "Diabetes", count: 15 },
-  { name: "Hipertensión", count: 20 },
+  { name: "Hipertension", count: 20 },
   { name: "Alergias", count: 10 },
 ];
 
 function Dashboard() {
   const [specialties, setSpecialties] = useState([]);
   const [specialtiesError, setSpecialtiesError] = useState("");
+  const [neighborhoods, setNeighborhoods] = useState([]);
+  const [neighborhoodsError, setNeighborhoodsError] = useState("");
+  const [appointmentsPerMonth, setAppointmentsPerMonth] = useState([]);
+  const [appointmentsPerMonthError, setAppointmentsPerMonthError] = useState("");
 
-  const apiBaseUrl = useMemo(() => process.env.REACT_APP_API_URL || "", []);
+  const apiBaseUrl = useMemo(() => process.env.REACT_APP_API_URL || "http://localhost:8080", []);
 
   useEffect(() => {
     const fetchTopSpecialties = async () => {
@@ -111,6 +124,297 @@ function Dashboard() {
   }, [apiBaseUrl]);
 
   useEffect(() => {
+    const fetchTopNeighborhoods = async () => {
+      try {
+        setNeighborhoodsError("");
+        const response = await fetch(`${apiBaseUrl}/cita/v1/barrios-mas-solicitados`);
+
+        if (!response.ok) {
+          throw new Error(`No se pudo consultar barrios (HTTP ${response.status}).`);
+        }
+
+        const payload = await response.json();
+        const normalized = Array.isArray(payload)
+          ? payload
+              .map((item) => ({
+                name: cleanNeighborhoodName(item?.barrio),
+                count: Number(item?.cantidadSolicitudes) || 0,
+              }))
+              .filter((item) => item.name)
+          : [];
+
+        const groupedByNeighborhood = normalized.reduce((acc, item) => {
+          const key = item.name.toLowerCase();
+          const previous = acc.get(key);
+
+          if (previous) {
+            previous.count += item.count;
+          } else {
+            acc.set(key, { ...item });
+          }
+
+          return acc;
+        }, new Map());
+
+        const sortedNeighborhoods = Array.from(groupedByNeighborhood.values())
+          .filter((item) => item.count > 0)
+          .sort((a, b) => b.count - a.count);
+
+        let chartNeighborhoods = sortedNeighborhoods;
+        if (sortedNeighborhoods.length > MAX_NEIGHBORHOODS) {
+          const top = sortedNeighborhoods.slice(0, MAX_NEIGHBORHOODS);
+          const othersCount = sortedNeighborhoods
+            .slice(MAX_NEIGHBORHOODS)
+            .reduce((sum, item) => sum + item.count, 0);
+
+          chartNeighborhoods = [...top, { name: "Otros", count: othersCount }];
+        }
+
+        setNeighborhoods(chartNeighborhoods);
+      } catch (error) {
+        setNeighborhoods([]);
+        setNeighborhoodsError(error?.message || "Error al cargar barrios.");
+      }
+    };
+
+    fetchTopNeighborhoods();
+  }, [apiBaseUrl]);
+
+  useEffect(() => {
+    const normalizeText = (value) =>
+      String(value)
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+    const parseDateParts = (value) => {
+      if (value === null || value === undefined) return null;
+
+      const raw = String(value).trim();
+      if (!raw) return null;
+
+      // dd/MM/yyyy or dd-MM-yyyy (example: 12/04/2025)
+      const dmy = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:\s.*)?$/);
+      if (dmy) {
+        return {
+          day: Number(dmy[1]),
+          monthIndex: Number(dmy[2]),
+          year: Number(dmy[3]),
+        };
+      }
+
+      // yyyy-MM-dd or yyyy/MM/dd
+      const ymd = raw.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})(?:[T\s].*)?$/);
+      if (ymd) {
+        return {
+          day: Number(ymd[3]),
+          monthIndex: Number(ymd[2]),
+          year: Number(ymd[1]),
+        };
+      }
+
+      return null;
+    };
+
+    const parseMonthIndex = (value) => {
+      if (value === null || value === undefined) return null;
+
+      if (typeof value === "number" && value >= 1 && value <= 12) {
+        return value;
+      }
+
+      const dateParts = parseDateParts(value);
+      if (dateParts?.monthIndex >= 1 && dateParts.monthIndex <= 12) {
+        return dateParts.monthIndex;
+      }
+
+      const raw = String(value).trim();
+      if (!raw) return null;
+
+      const asNumber = Number(raw);
+      if (!Number.isNaN(asNumber) && asNumber >= 1 && asNumber <= 12) {
+        return asNumber;
+      }
+
+      const normalized = normalizeText(raw);
+      const monthIdx = MONTH_LABELS.findIndex((month) => normalizeText(month) === normalized);
+      return monthIdx >= 0 ? monthIdx + 1 : null;
+    };
+
+    const parseYearValue = (value) => {
+      if (value === null || value === undefined) return null;
+
+      if (typeof value === "number") {
+        return value >= 1900 && value <= 3000 ? value : null;
+      }
+
+      const raw = String(value).trim();
+      if (!raw) return null;
+
+      const asNumber = Number(raw);
+      if (!Number.isNaN(asNumber) && asNumber >= 1900 && asNumber <= 3000) {
+        return asNumber;
+      }
+
+      const dateParts = parseDateParts(raw);
+      if (dateParts?.year) {
+        return dateParts.year;
+      }
+
+      return null;
+    };
+
+    const normalizeAppointments = (payload) => {
+      const rows = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+        ? payload.data
+        : [];
+
+      let parsedRows = 0;
+      const totalsByYearAndMonth = rows.reduce((accumulator, item) => {
+        const monthSourceValues = [
+          item?.mes,
+          item?.month,
+          item?.mesNumero,
+          item?.monthNumber,
+          item?.numeroMes,
+          item?.nombreMes,
+          item?.fecha,
+          item?.fechaCita,
+          item?.fechaSolicitud,
+          item?.createdAt,
+        ];
+        const monthIndex = monthSourceValues
+          .map((value) => parseMonthIndex(value))
+          .find((value) => value !== null && value !== undefined);
+
+        if (!monthIndex) return accumulator;
+
+        const yearSourceValues = [
+          item?.anio,
+          item?.year,
+          item?.ano,
+          item?.yearNumber,
+          item?.periodo,
+          item?.fecha,
+          item?.fechaCita,
+          item?.fechaSolicitud,
+          item?.createdAt,
+        ];
+        const parsedYear = yearSourceValues
+          .map((value) => parseYearValue(value))
+          .find((value) => value !== null && value !== undefined);
+        const year = parsedYear ? String(parsedYear) : "Sin ano";
+
+        const count = Number(
+          item?.cantidadCitas ??
+            item?.cantidadSolicitudes ??
+            item?.total ??
+            item?.count ??
+            item?.cantidad
+        );
+
+        if (Number.isNaN(count)) return accumulator;
+
+        const key = `${year}-${monthIndex}`;
+        const previous = accumulator.get(key);
+
+        if (previous) {
+          previous.count += count;
+        } else {
+          accumulator.set(key, {
+            year,
+            month: MONTH_LABELS[monthIndex - 1],
+            monthIndex,
+            count,
+          });
+        }
+
+        parsedRows += 1;
+        return accumulator;
+      }, new Map());
+
+      const series = Array.from(totalsByYearAndMonth.values()).sort((a, b) => {
+        const yearA = Number(a.year);
+        const yearB = Number(b.year);
+
+        if (!Number.isNaN(yearA) && !Number.isNaN(yearB) && yearA !== yearB) {
+          return yearA - yearB;
+        }
+
+        if (a.monthIndex !== b.monthIndex) {
+          return a.monthIndex - b.monthIndex;
+        }
+
+        return a.month.localeCompare(b.month);
+      });
+
+      return {
+        rowsCount: rows.length,
+        parsedRows,
+        series,
+      };
+    };
+
+    const fetchAppointmentsPerMonth = async () => {
+      try {
+        setAppointmentsPerMonthError("");
+        const token = getToken();
+        const requestOptions = token
+          ? {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          : undefined;
+
+        const endpointCandidates = [
+          `${apiBaseUrl}/cita/v1/citas-por-mes`,
+          `${apiBaseUrl}/cita/v1/solicitudes-por-mes`,
+          `${apiBaseUrl}/cita/v1/solicitudes/mensual`,
+        ];
+
+        let lastError = null;
+        for (const endpoint of endpointCandidates) {
+          try {
+            const response = await fetch(endpoint, requestOptions);
+
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+
+            const payload = await response.json();
+            const normalized = normalizeAppointments(payload);
+
+            // Only accept when at least one row was parsed correctly.
+            if (normalized.parsedRows > 0) {
+              setAppointmentsPerMonth(normalized.series);
+              return;
+            }
+
+            lastError = new Error(
+              `Sin datos mensuales parseables (filas: ${normalized.rowsCount}, parseadas: ${normalized.parsedRows}).`
+            );
+          } catch (error) {
+            lastError = error;
+          }
+        }
+
+        throw new Error(
+          `No se pudo consultar citas por mes (${lastError?.message || "sin detalle"}).`
+        );
+      } catch (error) {
+        setAppointmentsPerMonth([]);
+        setAppointmentsPerMonthError(error?.message || "Error al cargar citas por mes.");
+      }
+    };
+
+    fetchAppointmentsPerMonth();
+  }, [apiBaseUrl]);
+
+  useEffect(() => {
     window.__MEDIHOME_EXPORT_DATA__ = {
       specialties,
       neighborhoods,
@@ -125,7 +429,7 @@ function Dashboard() {
     return () => {
       window.__MEDIHOME_EXPORT_DATA__ = null;
     };
-  }, [specialties]);
+  }, [specialties, neighborhoods, appointmentsPerMonth]);
 
   return (
     <DashboardLayout>
@@ -142,6 +446,16 @@ function Dashboard() {
             {specialtiesError ? (
               <MDTypography variant="button" color="error" fontWeight="regular" mt={1}>
                 {specialtiesError}
+              </MDTypography>
+            ) : null}
+            {neighborhoodsError ? (
+              <MDTypography variant="button" color="error" fontWeight="regular" mt={1}>
+                {neighborhoodsError}
+              </MDTypography>
+            ) : null}
+            {appointmentsPerMonthError ? (
+              <MDTypography variant="button" color="error" fontWeight="regular" mt={1}>
+                {appointmentsPerMonthError}
               </MDTypography>
             ) : null}
           </MDBox>

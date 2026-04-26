@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 
 // @mui material components
@@ -264,6 +264,89 @@ function StatisticsCards({
   ages,
   diseases,
 }) {
+  const appointmentsChartData = useMemo(() => {
+    const monthLabels = [
+      "Enero",
+      "Febrero",
+      "Marzo",
+      "Abril",
+      "Mayo",
+      "Junio",
+      "Julio",
+      "Agosto",
+      "Septiembre",
+      "Octubre",
+      "Noviembre",
+      "Diciembre",
+    ];
+
+    const normalizedRows = appointmentsPerMonth
+      .map((row) => {
+        const monthIndex = Number(row?.monthIndex) || 0;
+        if (monthIndex < 1 || monthIndex > 12) return null;
+
+        const month = monthLabels[monthIndex - 1];
+        const year = String(row?.year || "Sin año");
+        const count = Number(row?.count) || 0;
+
+        return {
+          year,
+          month,
+          monthIndex,
+          count,
+        };
+      })
+      .filter(Boolean);
+
+    const years = Array.from(new Set(normalizedRows.map((row) => row.year))).sort((a, b) => {
+      const asNumberA = Number(a);
+      const asNumberB = Number(b);
+
+      if (!Number.isNaN(asNumberA) && !Number.isNaN(asNumberB)) {
+        return asNumberA - asNumberB;
+      }
+
+      return a.localeCompare(b);
+    });
+
+    const palette = ["#12b5ad", "#3f4d56", "#4f7cac", "#2c7a7b"];
+
+    const datasets = years.map((year, index) => ({
+      label: year,
+      data: monthLabels.map((_, monthOffset) => {
+        const monthIndex = monthOffset + 1;
+        return normalizedRows
+          .filter((row) => row.year === year && row.monthIndex === monthIndex)
+          .reduce((sum, row) => sum + row.count, 0);
+      }),
+      backgroundColor: palette[index % palette.length],
+      borderRadius: 4,
+      borderSkipped: false,
+      barPercentage: 0.88,
+      categoryPercentage: 0.72,
+      maxBarThickness: 24,
+    }));
+
+    const maxCount = datasets.reduce((maxValue, dataset) => {
+      const datasetMax = Math.max(...dataset.data, 0);
+      return Math.max(maxValue, datasetMax);
+    }, 0);
+
+    const exportRows = normalizedRows.map((row) => ({
+      year: row.year,
+      month: row.month,
+      monthIndex: row.monthIndex,
+      count: row.count,
+    }));
+
+    return {
+      labels: monthLabels,
+      datasets,
+      exportRows,
+      maxCount,
+    };
+  }, [appointmentsPerMonth]);
+
   return (
     <MDBox display="grid" gridTemplateColumns="repeat(12, minmax(0, 1fr))" gap={2}>
       <ChartCard
@@ -296,27 +379,64 @@ function StatisticsCards({
 
       <ChartCard
         title="Barrios con más citas"
-        subtitle="Zonas con mayor demanda de atención"
+        subtitle="Top barrios con mayor demanda de atención"
         filePrefix="barrios"
         sheetName="Barrios"
         exportRows={neighborhoods}
         toneKey="neighborhoods"
         span={5}
-        minHeight={320}
+        minHeight={360}
       >
-        <Doughnut
+        <Bar
           data={{
             labels: neighborhoods.map((n) => n.name),
             datasets: [
               {
                 label: "Citas",
                 data: neighborhoods.map((n) => n.count),
-                backgroundColor: ["#2c7a7b", "#38b2ac", "#81e6d9"],
-                borderWidth: 0,
+                backgroundColor: ["#2b6cb0", "#3182ce", "#4299e1", "#63b3ed", "#2c7a7b"],
+                borderColor: "#1f3d66",
+                borderWidth: 1,
+                borderRadius: 8,
+                barThickness: 9,
+                maxBarThickness: 9,
+                categoryPercentage: 0.62,
+                barPercentage: 0.82,
               },
             ],
           }}
-          options={{ responsive: true, maintainAspectRatio: false, cutout: "62%" }}
+          options={{
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+              padding: {
+                right: 18,
+              },
+            },
+            plugins: {
+              legend: {
+                display: false,
+              },
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: {
+                  precision: 0,
+                },
+                grid: {
+                  color: "rgba(15, 23, 42, 0.08)",
+                },
+              },
+              y: {
+                grid: {
+                  display: false,
+                },
+              },
+            },
+          }}
+          plugins={[barValueLabelsPlugin]}
         />
       </ChartCard>
 
@@ -351,42 +471,99 @@ function StatisticsCards({
       </ChartCard>
 
       <ChartCard
-        title="Cantidad de citas por mes"
-        subtitle="Volumen de solicitudes recibidas cada mes"
+        title="Cantidad de citas por mes y año"
+        subtitle="Comparativo mensual entre años"
         filePrefix="citas-por-mes"
         sheetName="Citas por mes"
-        exportRows={appointmentsPerMonth}
+        exportRows={appointmentsChartData.exportRows}
         toneKey="appointmentsPerMonth"
         span={5}
         minHeight={330}
       >
         <Bar
           data={{
-            labels: appointmentsPerMonth.map((m) => m.month),
-            datasets: [
-              {
-                label: "Cantidad de citas",
-                data: appointmentsPerMonth.map((m) => m.count),
-                backgroundColor: [
-                  "#4f7cac",
-                  "#7f9bbd",
-                  "#9cb3cc",
-                  "#2b6cb0",
-                  "#5d8cc0",
-                  "#90aecf",
-                  "#3c6d9b",
-                  "#6c8fb3",
-                  "#a2b8d2",
-                  "#4a7ba9",
-                  "#88a5c4",
-                  "#c2d3e4",
-                ],
-                borderRadius: 12,
-                borderSkipped: false,
-              },
-            ],
+            labels: appointmentsChartData.labels,
+            datasets: appointmentsChartData.datasets,
           }}
-          options={{ responsive: true, maintainAspectRatio: false }}
+          options={{
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: "index",
+              intersect: false,
+            },
+            layout: {
+              padding: {
+                top: 6,
+                right: 10,
+              },
+            },
+            plugins: {
+              legend: {
+                display: true,
+                position: "top",
+                align: "start",
+                labels: {
+                  usePointStyle: true,
+                  pointStyle: "circle",
+                  boxWidth: 10,
+                  boxHeight: 10,
+                  color: "#4b5563",
+                },
+                title: {
+                  display: true,
+                  text: "Año",
+                  color: "#4b5563",
+                  padding: {
+                    right: 12,
+                  },
+                },
+              },
+              tooltip: {
+                callbacks: {
+                  label: (context) => {
+                    const value = Number(context.parsed?.y || 0);
+                    return `${context.dataset.label}: ${value.toLocaleString("es-CO")}`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                grid: {
+                  display: false,
+                },
+                ticks: {
+                  autoSkip: false,
+                  minRotation: 35,
+                  maxRotation: 35,
+                  color: "#6b7280",
+                },
+              },
+              y: {
+                beginAtZero: true,
+                grace: "8%",
+                ticks: {
+                  precision: 0,
+                  color: "#6b7280",
+                  callback: (value) => {
+                    const numericValue = Number(value) || 0;
+                    if (appointmentsChartData.maxCount >= 1000) {
+                      return `${(numericValue / 1000).toLocaleString("es-CO", {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 1,
+                      })} mil.`;
+                    }
+
+                    return numericValue.toLocaleString("es-CO");
+                  },
+                },
+                grid: {
+                  color: "rgba(55, 65, 81, 0.14)",
+                },
+              },
+            },
+          }}
           plugins={[barValueLabelsPlugin]}
         />
       </ChartCard>
@@ -459,8 +636,8 @@ function StatisticsCards({
       </ChartCard>
 
       <ChartCard
-        title="Tipo de consulta más solicitada"
-        subtitle="Canal de atención preferido"
+        title="Tipo de consulta mas solicitada"
+        subtitle="Canal de atencion preferido"
         filePrefix="tipo-consulta"
         sheetName="Tipo de consulta"
         exportRows={consultationTypes}
@@ -484,8 +661,8 @@ function StatisticsCards({
       </ChartCard>
 
       <ChartCard
-        title="Enfermedades más registradas"
-        subtitle="Motivos clínicos más comunes"
+        title="Enfermedades mas registradas"
+        subtitle="Motivos clinicos mas comunes"
         filePrefix="enfermedades"
         sheetName="Enfermedades"
         exportRows={diseases}
@@ -546,7 +723,9 @@ StatisticsCards.propTypes = {
   ).isRequired,
   appointmentsPerMonth: PropTypes.arrayOf(
     PropTypes.shape({
+      year: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
       month: PropTypes.string.isRequired,
+      monthIndex: PropTypes.number,
       count: PropTypes.number.isRequired,
     })
   ).isRequired,

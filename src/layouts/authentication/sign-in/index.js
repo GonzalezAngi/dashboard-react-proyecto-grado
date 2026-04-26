@@ -32,6 +32,8 @@ import { saveSession, isAuthenticated } from "utils/auth";
 // Logo
 import medihomeLogo from "assets/images/medihome.png";
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
 function SignIn() {
   const navigate = useNavigate();
 
@@ -42,6 +44,9 @@ function SignIn() {
   const [error, setError] = useState("");
 
   const LOGIN_ENDPOINT = process.env.REACT_APP_LOGIN_ENDPOINT || "/auth/login";
+  const loginUrl = LOGIN_ENDPOINT.startsWith("http")
+    ? LOGIN_ENDPOINT
+    : `${API_BASE_URL}${LOGIN_ENDPOINT.startsWith("/") ? "" : "/"}${LOGIN_ENDPOINT}`;
 
   const normalizeLoginResponse = (payload) => {
     const token = payload?.token || payload?.accessToken || payload?.jwt;
@@ -61,7 +66,7 @@ function SignIn() {
   };
 
   const performLoginRequest = async (credentials) => {
-    const response = await fetch(LOGIN_ENDPOINT, {
+    const response = await fetch(loginUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -102,7 +107,7 @@ function SignIn() {
       navigate("/dashboard");
     } catch (requestError) {
       if (requestError?.message === "Failed to fetch") {
-        setError("No hay conexión con el backend en http://localhost:8080.");
+        setError(`No hay conexión con el backend en ${API_BASE_URL}.`);
       } else {
         setError(requestError.message || "No se pudo iniciar sesión.");
       }
