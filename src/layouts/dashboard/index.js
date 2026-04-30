@@ -61,7 +61,7 @@ const ages = [
   { range: "61+", count: 20 },
 ];
 
-const consultationReasons = [
+const DEFAULT_CONSULTATION_REASONS = [
   { name: "Control general", count: 58 },
   { name: "Dolor de cabeza", count: 41 },
   { name: "Fiebre", count: 36 },
@@ -85,6 +85,8 @@ function Dashboard() {
   const [appointmentsPerMonthError, setAppointmentsPerMonthError] = useState("");
   const [consultationTypes, setConsultationTypes] = useState([]);
   const [consultationTypesError, setConsultationTypesError] = useState("");
+  const [consultationReasons, setConsultationReasons] = useState(DEFAULT_CONSULTATION_REASONS);
+  const [consultationReasonsError, setConsultationReasonsError] = useState("");
 
   const apiBaseUrl = useMemo(() => process.env.REACT_APP_API_URL || "http://localhost:8080", []);
 
@@ -211,6 +213,41 @@ function Dashboard() {
     };
 
     fetchConsultationTypes();
+  }, [apiBaseUrl]);
+
+  useEffect(() => {
+    const fetchConsultationReasons = async () => {
+      try {
+        setConsultationReasonsError("");
+        const response = await fetch(`${apiBaseUrl}/cita/v1/motivos-consulta-mas-frecuentes`);
+
+        if (!response.ok) {
+          throw new Error(`No se pudo consultar motivos (HTTP ${response.status}).`);
+        }
+
+        const payload = await response.json();
+        const normalized = Array.isArray(payload)
+          ? payload
+              .map((item) => ({
+                name:
+                  item?.tipoConsulta || item?.tipo_consulta || item?.motivo || item?.nombre || "Sin motivo",
+                count: Number(item?.cantidad ?? item?.count ?? item?.cantidadSolicitudes) || 0,
+              }))
+              .filter((item) => item.name)
+          : [];
+
+        if (!normalized || normalized.length === 0) {
+          setConsultationReasons(DEFAULT_CONSULTATION_REASONS);
+        } else {
+          setConsultationReasons(normalized);
+        }
+      } catch (error) {
+        setConsultationReasons(DEFAULT_CONSULTATION_REASONS);
+        setConsultationReasonsError(error?.message || "Error al cargar motivos de consulta.");
+      }
+    };
+
+    fetchConsultationReasons();
   }, [apiBaseUrl]);
 
   useEffect(() => {
