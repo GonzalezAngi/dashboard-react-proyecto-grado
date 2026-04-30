@@ -63,4 +63,17 @@ public interface CitaRepository extends CrudRepository<Cita, Integer> {
         """)
     List<CitaTipoCount> obtenerTiposCitaMasSolicitados();
 
+    @Query("""
+        SELECT new com.backend.backend.DTO.CitaTipoCount(
+            TRIM(c.motivo_consulta),
+            COUNT(c.id)
+        )
+        FROM Cita c
+        WHERE c.motivo_consulta IS NOT NULL
+          AND TRIM(c.motivo_consulta) <> ''
+        GROUP BY TRIM(c.motivo_consulta)
+        ORDER BY COUNT(c.id) DESC
+        """)
+    List<CitaTipoCount> obtenerMotivosConsultaMasFrecuentes();
+
 }

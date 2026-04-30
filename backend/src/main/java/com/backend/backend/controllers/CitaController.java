@@ -118,6 +118,29 @@ public class CitaController {
         return citaService.obtenerTiposCitaMasSolicitados();
     }
 
+    @GetMapping("/motivos-consulta-mas-frecuentes")
+    public List<CitaTipoCount> obtenerMotivosConsultaMasFrecuentes() {
+        return citaService.obtenerMotivosConsultaMasFrecuentes();
+    }
+
+    @GetMapping("/tipo-cita-mas-solicitado")
+    public ResponseEntity<CitaTipoCount> obtenerTipoCitaMasSolicitado() {
+        CitaTipoCount top = citaService.obtenerTipoCitaMasSolicitado();
+        if (top == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(top);
+    }
+
+    @GetMapping("/tipos-cita-mas-solicitados/top")
+    public ResponseEntity<List<CitaTipoCount>> obtenerTopNTiposCitaMasSolicitados(@RequestParam(required = false) Integer limit) {
+        List<CitaTipoCount> lista = citaService.obtenerTopNTiposCitaMasSolicitados(limit);
+        if (lista == null || lista.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(lista);
+    }
+
     @PutMapping("/citas/{id}/respuesta")
     public ResponseEntity<?> responderCita(
             @PathVariable Integer id,

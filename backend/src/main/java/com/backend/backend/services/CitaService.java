@@ -85,4 +85,27 @@ public class CitaService {
     public List<CitaTipoCount> obtenerTiposCitaMasSolicitados() {
         return citaRepository.obtenerTiposCitaMasSolicitados();
     }
+
+    public List<CitaTipoCount> obtenerMotivosConsultaMasFrecuentes() {
+        return citaRepository.obtenerMotivosConsultaMasFrecuentes();
+    }
+
+    public CitaTipoCount obtenerTipoCitaMasSolicitado() {
+        List<CitaTipoCount> lista = obtenerTiposCitaMasSolicitados();
+        if (lista == null || lista.isEmpty()) {
+            return null;
+        }
+        return lista.get(0);
+    }
+
+    public List<CitaTipoCount> obtenerTopNTiposCitaMasSolicitados(Integer limit) {
+        List<CitaTipoCount> lista = obtenerTiposCitaMasSolicitados();
+        if (lista == null || lista.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        if (limit == null || limit <= 0) {
+            limit = 5; // default
+        }
+        return lista.stream().limit(limit).collect(java.util.stream.Collectors.toList());
+    }
 }
