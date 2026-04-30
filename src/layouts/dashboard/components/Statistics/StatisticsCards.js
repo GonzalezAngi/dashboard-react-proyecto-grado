@@ -99,6 +99,38 @@ const barValueLabelsPlugin = {
     ctx.restore();
   },
 };
+
+const doughnutValueLabelsPlugin = {
+  id: "doughnutValueLabelsPlugin",
+  afterDatasetsDraw(chart, args, options) {
+    const { ctx } = chart;
+
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      const meta = chart.getDatasetMeta(datasetIndex);
+      if (!meta || !meta.data) return;
+
+      meta.data.forEach((element, index) => {
+        // only draw for arc elements (pie/doughnut)
+        if (typeof element.circumference === "undefined") return;
+
+        const value = dataset.data?.[index];
+        if (value === null || value === undefined || String(value) === "") return;
+
+        const position = element.tooltipPosition();
+
+        ctx.save();
+        ctx.fillStyle = (options && options.color) || "#1f2937";
+        const fontSize = (options && options.fontSize) || 12;
+        const fontWeight = (options && options.fontWeight) || 600;
+        ctx.font = `${fontWeight} ${fontSize}px Roboto, Helvetica, Arial, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(value), position.x, position.y);
+        ctx.restore();
+      });
+    });
+  },
+};
 const CARD_THEMES = {
   specialties: { top: "#2b6cb0", bottom: "#edf5ff", border: "rgba(43, 108, 176, 0.18)" },
   neighborhoods: { top: "#2c7a7b", bottom: "#eefaf9", border: "rgba(44, 122, 123, 0.18)" },
@@ -657,6 +689,7 @@ function StatisticsCards({
             ],
           }}
           options={{ responsive: true, maintainAspectRatio: false, cutout: "60%" }}
+          plugins={[doughnutValueLabelsPlugin]}
         />
       </ChartCard>
 

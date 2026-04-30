@@ -23,7 +23,6 @@ import PropTypes from "prop-types";
 
 // react-chartjs-2 components
 import { Doughnut } from "react-chartjs-2";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 
 // @mui material components
 import Card from "@mui/material/Card";
@@ -36,7 +35,6 @@ import MDTypography from "components/MDTypography";
 // DefaultDoughnutChart configurations
 import configs from "examples/Charts/DoughnutCharts/DefaultDoughnutChart/configs";
 
-ChartJS.register(ArcElement, Tooltip, Legend);
 
 function DefaultDoughnutChart({ icon, title, description, height, chart }) {
   const { data, options } = configs(chart.labels || [], chart.datasets || {}, chart.cutout);

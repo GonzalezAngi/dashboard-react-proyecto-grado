@@ -26,7 +26,6 @@ const MONTH_LABELS = [
   "Noviembre",
   "Diciembre",
 ];
-
 const cleanNeighborhoodName = (rawValue) => {
   if (!rawValue) return "Sin barrio";
 
@@ -69,13 +68,7 @@ const consultationReasons = [
   { name: "Chequeo anual", count: 32 },
   { name: "Dolor estomacal", count: 27 },
 ];
-
-const consultationTypes = [
-  { name: "Presencial", count: 220 },
-  { name: "Virtual", count: 80 },
-  { name: "Urgencia", count: 40 },
-];
-
+ 
 const diseases = [
   { name: "Gripe", count: 25 },
   { name: "Diabetes", count: 15 },
@@ -90,6 +83,8 @@ function Dashboard() {
   const [neighborhoodsError, setNeighborhoodsError] = useState("");
   const [appointmentsPerMonth, setAppointmentsPerMonth] = useState([]);
   const [appointmentsPerMonthError, setAppointmentsPerMonthError] = useState("");
+  const [consultationTypes, setConsultationTypes] = useState([]);
+  const [consultationTypesError, setConsultationTypesError] = useState("");
 
   const apiBaseUrl = useMemo(() => process.env.REACT_APP_API_URL || "http://localhost:8080", []);
 
@@ -178,6 +173,44 @@ function Dashboard() {
     };
 
     fetchTopNeighborhoods();
+  }, [apiBaseUrl]);
+
+  useEffect(() => {
+    const fetchConsultationTypes = async () => {
+      try {
+        setConsultationTypesError("");
+        const response = await fetch(`${apiBaseUrl}/cita/v1/tipos-cita-mas-solicitados`);
+
+        if (!response.ok) {
+          throw new Error(`No se pudo consultar tipos de cita (HTTP ${response.status}).`);
+        }
+
+        const payload = await response.json();
+        const normalized = Array.isArray(payload)
+          ? payload
+              .map((item) => ({
+                name:
+                  [
+                    item?.tipoConsulta,
+                    item?.tipo_consulta,
+                    item?.tipo,
+                    item?.nombre,
+                  ].find((v) => v !== null && v !== undefined && String(v).trim() !== "") ||
+                  "Sin tipo",
+                count:
+                  Number(item?.cantidad ?? item?.cantidadSolicitudes ?? item?.count) || 0,
+              }))
+              .filter((item) => item.name)
+          : [];
+
+        setConsultationTypes(normalized);
+      } catch (error) {
+        setConsultationTypes([]);
+        setConsultationTypesError(error?.message || "Error al cargar tipos de consulta.");
+      }
+    };
+
+    fetchConsultationTypes();
   }, [apiBaseUrl]);
 
   useEffect(() => {
