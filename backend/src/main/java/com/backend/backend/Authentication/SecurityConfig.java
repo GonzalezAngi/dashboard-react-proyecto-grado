@@ -38,6 +38,7 @@ public class SecurityConfig {
                     .requestMatchers("/cita/v1/citas-por-mes").permitAll()
                     .requestMatchers("/cita/v1/tipos-cita-mas-solicitados").permitAll()
                     .requestMatchers("/cita/v1/motivos-consulta-mas-frecuentes").permitAll()
+                    .requestMatchers("/cita/v1/medios-pago-mas-solicitados").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

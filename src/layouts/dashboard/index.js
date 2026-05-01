@@ -68,8 +68,8 @@ const DEFAULT_CONSULTATION_REASONS = [
   { name: "Chequeo anual", count: 32 },
   { name: "Dolor estomacal", count: 27 },
 ];
- 
-const diseases = [
+
+const DEFAULT_DISEASES = [
   { name: "Gripe", count: 25 },
   { name: "Diabetes", count: 15 },
   { name: "Hipertension", count: 20 },
@@ -77,6 +77,14 @@ const diseases = [
 ];
 
 function Dashboard() {
+  const pickFirstNonEmpty = (obj, keys) => {
+    if (!obj) return null;
+    for (const k of keys) {
+      const v = obj[k];
+      if (v !== null && v !== undefined && String(v).trim() !== "") return v;
+    }
+    return null;
+  };
   const [specialties, setSpecialties] = useState([]);
   const [specialtiesError, setSpecialtiesError] = useState("");
   const [neighborhoods, setNeighborhoods] = useState([]);
@@ -87,6 +95,8 @@ function Dashboard() {
   const [consultationTypesError, setConsultationTypesError] = useState("");
   const [consultationReasons, setConsultationReasons] = useState(DEFAULT_CONSULTATION_REASONS);
   const [consultationReasonsError, setConsultationReasonsError] = useState("");
+  const [diseases, setDiseases] = useState(DEFAULT_DISEASES);
+  const [diseasesError, setDiseasesError] = useState("");
 
   const apiBaseUrl = useMemo(() => process.env.REACT_APP_API_URL || "http://localhost:8080", []);
 
@@ -192,15 +202,13 @@ function Dashboard() {
           ? payload
               .map((item) => ({
                 name:
-                  [
-                    item?.tipoConsulta,
-                    item?.tipo_consulta,
-                    item?.tipo,
-                    item?.nombre,
-                  ].find((v) => v !== null && v !== undefined && String(v).trim() !== "") ||
-                  "Sin tipo",
-                count:
-                  Number(item?.cantidad ?? item?.cantidadSolicitudes ?? item?.count) || 0,
+                  pickFirstNonEmpty(item, [
+                    "tipoConsulta",
+                    "tipo_consulta",
+                    "tipo",
+                    "nombre",
+                  ]) || "Sin tipo",
+                count: Number(item?.cantidad ?? item?.cantidadSolicitudes ?? item?.count) || 0,
               }))
               .filter((item) => item.name)
           : [];
@@ -230,7 +238,12 @@ function Dashboard() {
           ? payload
               .map((item) => ({
                 name:
-                  item?.tipoConsulta || item?.tipo_consulta || item?.motivo || item?.nombre || "Sin motivo",
+                  pickFirstNonEmpty(item, [
+                    "tipoConsulta",
+                    "tipo_consulta",
+                    "motivo",
+                    "nombre",
+                  ]) || "Sin motivo",
                 count: Number(item?.cantidad ?? item?.count ?? item?.cantidadSolicitudes) || 0,
               }))
               .filter((item) => item.name)
@@ -485,6 +498,47 @@ function Dashboard() {
   }, [apiBaseUrl]);
 
   useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      try {
+        setDiseasesError("");
+        const response = await fetch(`${apiBaseUrl}/cita/v1/medios-pago-mas-solicitados`);
+
+        if (!response.ok) {
+          throw new Error(`No se pudo consultar medios de pago (HTTP ${response.status}).`);
+        }
+
+        const payload = await response.json();
+        const normalized = Array.isArray(payload)
+          ? payload
+              .map((item) => ({
+                name:
+                  pickFirstNonEmpty(item, [
+                    "tipoConsulta",
+                    "tipo_consulta",
+                    "medio_pago",
+                    "medioPago",
+                    "nombre",
+                  ]) || "Sin medio",
+                count: Number(item?.cantidad ?? item?.count ?? item?.cantidadSolicitudes) || 0,
+              }))
+              .filter((item) => item.name)
+          : [];
+
+        if (!normalized || normalized.length === 0) {
+          setDiseases(DEFAULT_DISEASES);
+        } else {
+          setDiseases(normalized);
+        }
+      } catch (error) {
+        setDiseases(DEFAULT_DISEASES);
+        setDiseasesError(error?.message || "Error al cargar medios de pago.");
+      }
+    };
+
+    fetchPaymentMethods();
+  }, [apiBaseUrl]);
+
+  useEffect(() => {
     window.__MEDIHOME_EXPORT_DATA__ = {
       specialties,
       neighborhoods,
@@ -499,7 +553,7 @@ function Dashboard() {
     return () => {
       window.__MEDIHOME_EXPORT_DATA__ = null;
     };
-  }, [specialties, neighborhoods, appointmentsPerMonth]);
+  }, [specialties, neighborhoods, appointmentsPerMonth, diseases, consultationReasons, consultationTypes]);
 
   return (
     <DashboardLayout>

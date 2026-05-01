@@ -4,6 +4,7 @@ import com.backend.backend.Authentication.JwtService;
 import com.backend.backend.DTO.BarrioCitaCount;
 import com.backend.backend.DTO.CitaMesCount;
 import com.backend.backend.DTO.CitaTipoCount;
+import com.backend.backend.DTO.MedioPagoCount;
 import com.backend.backend.DTO.PushNotificationRequest;
 import com.backend.backend.models.Cita;
 import com.backend.backend.models.Medico;
@@ -118,6 +119,7 @@ public class CitaController {
         return citaService.obtenerTiposCitaMasSolicitados();
     }
 
+
     @GetMapping("/motivos-consulta-mas-frecuentes")
     public List<CitaTipoCount> obtenerMotivosConsultaMasFrecuentes() {
         return citaService.obtenerMotivosConsultaMasFrecuentes();
@@ -135,6 +137,29 @@ public class CitaController {
     @GetMapping("/tipos-cita-mas-solicitados/top")
     public ResponseEntity<List<CitaTipoCount>> obtenerTopNTiposCitaMasSolicitados(@RequestParam(required = false) Integer limit) {
         List<CitaTipoCount> lista = citaService.obtenerTopNTiposCitaMasSolicitados(limit);
+        if (lista == null || lista.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(lista);
+    }
+
+    @GetMapping("/medios-pago-mas-solicitados")
+    public List<MedioPagoCount> obtenerMediosPagoMasSolicitados() {
+        return citaService.obtenerMediosPagoMasSolicitados();
+    }
+
+    @GetMapping("/medio-pago-mas-solicitado")
+    public ResponseEntity<MedioPagoCount> obtenerMedioPagoMasSolicitado() {
+        MedioPagoCount top = citaService.obtenerMedioPagoMasSolicitado();
+        if (top == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(top);
+    }
+
+    @GetMapping("/medios-pago-mas-solicitados/top")
+    public ResponseEntity<List<MedioPagoCount>> obtenerTopNMediosPagoMasSolicitados(@RequestParam(required = false) Integer limit) {
+        List<MedioPagoCount> lista = citaService.obtenerTopNMediosPagoMasSolicitados(limit);
         if (lista == null || lista.isEmpty()) {
             return ResponseEntity.noContent().build();
         }

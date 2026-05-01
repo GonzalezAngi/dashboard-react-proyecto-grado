@@ -293,7 +293,6 @@ function StatisticsCards({
   appointmentsPerMonth,
   consultationReasons,
   consultationTypes,
-  ages,
   diseases,
 }) {
   const appointmentsChartData = useMemo(() => {
@@ -600,44 +599,7 @@ function StatisticsCards({
         />
       </ChartCard>
 
-      <ChartCard
-        title="Edad de pacientes"
-        subtitle="Rango etario con más solicitudes"
-        filePrefix="edad-pacientes"
-        sheetName="Edad pacientes"
-        exportRows={ages}
-        toneKey="ages"
-        span={4}
-        minHeight={320}
-      >
-        <Bar
-          data={{
-            labels: ages.map((a) => a.range),
-            datasets: [
-              {
-                label: "Cantidad de pacientes",
-                data: ages.map((a) => a.count),
-                backgroundColor: "#d69e2e",
-                borderRadius: 10,
-                borderSkipped: false,
-              },
-            ],
-          }}
-          plugins={[barValueLabelsPlugin]}
-          options={{
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              x: {
-                ticks: {
-                  maxRotation: 45,
-                  minRotation: 0,
-                },
-              },
-            },
-          }}
-        />
-      </ChartCard>
+      {/* 'Edad de pacientes' chart removed per user request */}
 
       <ChartCard
         title="Motivos de consulta más frecuentes"
@@ -771,12 +733,6 @@ StatisticsCards.propTypes = {
   consultationTypes: PropTypes.arrayOf(
     PropTypes.shape({
       name: PropTypes.string.isRequired,
-      count: PropTypes.number.isRequired,
-    })
-  ).isRequired,
-  ages: PropTypes.arrayOf(
-    PropTypes.shape({
-      range: PropTypes.string.isRequired,
       count: PropTypes.number.isRequired,
     })
   ).isRequired,

@@ -4,6 +4,7 @@ import com.backend.backend.DTO.BarrioCitaCount;
 import com.backend.backend.DTO.CitaMesCount;
 import com.backend.backend.DTO.CitaMesCountProjection;
 import com.backend.backend.DTO.CitaTipoCount;
+import com.backend.backend.DTO.MedioPagoCount;
 import com.backend.backend.models.Cita;
 import com.backend.backend.repositories.CitaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,6 +87,7 @@ public class CitaService {
         return citaRepository.obtenerTiposCitaMasSolicitados();
     }
 
+
     public List<CitaTipoCount> obtenerMotivosConsultaMasFrecuentes() {
         return citaRepository.obtenerMotivosConsultaMasFrecuentes();
     }
@@ -96,6 +98,29 @@ public class CitaService {
             return null;
         }
         return lista.get(0);
+    }
+
+    public List<MedioPagoCount> obtenerMediosPagoMasSolicitados() {
+        return citaRepository.obtenerMediosPagoMasSolicitados();
+    }
+
+    public MedioPagoCount obtenerMedioPagoMasSolicitado() {
+        List<MedioPagoCount> lista = obtenerMediosPagoMasSolicitados();
+        if (lista == null || lista.isEmpty()) {
+            return null;
+        }
+        return lista.get(0);
+    }
+
+    public List<MedioPagoCount> obtenerTopNMediosPagoMasSolicitados(Integer limit) {
+        List<MedioPagoCount> lista = obtenerMediosPagoMasSolicitados();
+        if (lista == null || lista.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        if (limit == null || limit <= 0) {
+            limit = 5;
+        }
+        return lista.stream().limit(limit).collect(java.util.stream.Collectors.toList());
     }
 
     public List<CitaTipoCount> obtenerTopNTiposCitaMasSolicitados(Integer limit) {

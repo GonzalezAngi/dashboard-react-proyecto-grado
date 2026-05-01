@@ -4,6 +4,7 @@ import com.backend.backend.DTO.BarrioCitaCount;
 import com.backend.backend.DTO.CitaMesCount;
 import com.backend.backend.DTO.CitaMesCountProjection;
 import com.backend.backend.DTO.CitaTipoCount;
+import com.backend.backend.DTO.MedioPagoCount;
 import com.backend.backend.models.Cita;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
@@ -62,6 +63,20 @@ public interface CitaRepository extends CrudRepository<Cita, Integer> {
         ORDER BY COUNT(c.id) DESC
         """)
     List<CitaTipoCount> obtenerTiposCitaMasSolicitados();
+    
+
+    @Query("""
+        SELECT new com.backend.backend.DTO.MedioPagoCount(
+            TRIM(c.medio_pago),
+            COUNT(c.id)
+        )
+        FROM Cita c
+        WHERE c.medio_pago IS NOT NULL
+          AND TRIM(c.medio_pago) <> ''
+        GROUP BY TRIM(c.medio_pago)
+        ORDER BY COUNT(c.id) DESC
+        """)
+    List<MedioPagoCount> obtenerMediosPagoMasSolicitados();
 
     @Query("""
         SELECT new com.backend.backend.DTO.CitaTipoCount(
