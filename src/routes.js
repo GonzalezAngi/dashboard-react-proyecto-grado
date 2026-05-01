@@ -39,6 +39,7 @@ Coded by www.creative-tim.com
 import Dashboard from "layouts/dashboard";
 import Home from "layouts/home";
 import SignIn from "layouts/authentication/sign-in";
+import Medicos from "layouts/medicos";
 
 // @mui icons
 import Icon from "@mui/material/Icon";
@@ -64,6 +65,14 @@ const routes = [
     icon: <Icon fontSize="small">dashboard</Icon>,
     route: "/dashboard",
     component: <Dashboard />,
+  },
+  {
+    type: "collapse",
+    name: "Médicos",
+    key: "medicos",
+    icon: <Icon fontSize="small">medical_services</Icon>,
+    route: "/medicos",
+    component: <Medicos />,
   },
 ];
 
