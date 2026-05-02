@@ -196,7 +196,11 @@ function ChartCard({
     <Card
       ref={cardRef}
       sx={{
-        gridColumn: { xs: "span 1", md: `span ${span}` },
+        gridColumn: {
+          xs: "span 12",
+          sm: `span ${Math.min(6, span || 4)}`,
+          md: `span ${span || 4}`,
+        },
         borderRadius: 4,
         overflow: "hidden",
         border: `1px solid ${theme.border}`,
@@ -379,7 +383,12 @@ function StatisticsCards({
   }, [appointmentsPerMonth]);
 
   return (
-    <MDBox display="grid" gridTemplateColumns="repeat(12, minmax(0, 1fr))" gap={2}>
+    <MDBox
+      display="grid"
+      gridTemplateColumns="repeat(12, minmax(0, 1fr))"
+      gap={{ xs: 2, md: 3 }}
+      sx={{ width: "100%", boxSizing: "border-box", px: { xs: 2, md: 3 } }}
+    >
       <ChartCard
         title="Especialidades más solicitadas"
         subtitle="Distribución de atenciones por especialidad"

@@ -148,115 +148,124 @@ export default function Medicos() {
   const table = { columns, rows };
 
   return (
-    <MDBox py={3}>
-      <Card>
-        <Dialog
-          open={Boolean(editingId)}
-          onClose={() => setEditingId(null)}
-          fullWidth
-          maxWidth="sm"
-        >
-          <DialogTitle>Editar médico</DialogTitle>
-          <DialogContent dividers>
-            <TextField
-              margin="dense"
-              label="Nombre"
-              fullWidth
-              value={form.nombre}
-              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-            />
-            <TextField
-              margin="dense"
-              label="Teléfono"
-              fullWidth
-              value={form.telefono}
-              onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-            />
-            <TextField
-              margin="dense"
-              label="Email"
-              fullWidth
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-            />
-            <TextField
-              margin="dense"
-              label="Identificación"
-              fullWidth
-              value={form.identificacion}
-              onChange={(e) => setForm({ ...form, identificacion: e.target.value })}
-            />
-            <TextField
-              margin="dense"
-              label="Estado"
-              fullWidth
-              value={form.estado}
-              onChange={(e) => setForm({ ...form, estado: e.target.value })}
-            />
-          </DialogContent>
-          <DialogActions>
-            <MDButton color="secondary" onClick={() => setEditingId(null)}>
-              Cancelar
-            </MDButton>
-            <MDButton
-              variant="gradient"
-              color="info"
-              onClick={async () => {
-                try {
-                  const apiBase = process.env.REACT_APP_API_URL || "http://localhost:8080";
-                  const payload = {
-                    id: Number(form.usuarioId) || null,
-                    nombre: form.nombre,
-                    telefono: form.telefono,
-                    email: form.email,
-                    identificacion: form.identificacion,
-                    genero: form.genero,
-                    estado: form.estado,
-                    tipo_identificacion: form.tipo_identificacion,
-                    contrasena: form.contrasena || null,
-                    tipo_usuario: form.tipo_usuario,
-                    direccion: form.direccion,
-                  };
-                  const headers = { "Content-Type": "application/json" };
-                  const token = getToken();
-                  if (token) headers.Authorization = `Bearer ${token}`;
-                  const resp = await fetch(`${apiBase}/user/v1/update`, {
-                    method: "PUT",
-                    headers,
-                    body: JSON.stringify(payload),
-                  });
-                  if (!resp.ok) {
-                    const txt = await resp.text();
-                    alert(`Error ${resp.status}: ${txt}`);
-                    return;
+    <MDBox py={3} sx={{ pl: { lg: "300px" }, boxSizing: "border-box" }}>
+      <MDBox display="flex" justifyContent="center">
+        <Card sx={{ width: "100%", maxWidth: 1200, borderRadius: 3 }}>
+          <Dialog
+            open={Boolean(editingId)}
+            onClose={() => setEditingId(null)}
+            fullWidth
+            maxWidth="sm"
+          >
+            <DialogTitle>Editar médico</DialogTitle>
+            <DialogContent dividers>
+              <TextField
+                margin="dense"
+                label="Nombre"
+                fullWidth
+                value={form.nombre}
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+              />
+              <TextField
+                margin="dense"
+                label="Teléfono"
+                fullWidth
+                value={form.telefono}
+                onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+              />
+              <TextField
+                margin="dense"
+                label="Email"
+                fullWidth
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
+              <TextField
+                margin="dense"
+                label="Identificación"
+                fullWidth
+                value={form.identificacion}
+                onChange={(e) => setForm({ ...form, identificacion: e.target.value })}
+              />
+              <TextField
+                margin="dense"
+                label="Estado"
+                fullWidth
+                value={form.estado}
+                onChange={(e) => setForm({ ...form, estado: e.target.value })}
+              />
+            </DialogContent>
+            <DialogActions>
+              <MDButton color="secondary" onClick={() => setEditingId(null)}>
+                Cancelar
+              </MDButton>
+              <MDButton
+                variant="gradient"
+                color="info"
+                onClick={async () => {
+                  try {
+                    const apiBase = process.env.REACT_APP_API_URL || "http://localhost:8080";
+                    const payload = {
+                      id: Number(form.usuarioId) || null,
+                      nombre: form.nombre,
+                      telefono: form.telefono,
+                      email: form.email,
+                      identificacion: form.identificacion,
+                      genero: form.genero,
+                      estado: form.estado,
+                      tipo_identificacion: form.tipo_identificacion,
+                      contrasena: form.contrasena || null,
+                      tipo_usuario: form.tipo_usuario,
+                      direccion: form.direccion,
+                    };
+                    const headers = { "Content-Type": "application/json" };
+                    const token = getToken();
+                    if (token) headers.Authorization = `Bearer ${token}`;
+                    const resp = await fetch(`${apiBase}/user/v1/update`, {
+                      method: "PUT",
+                      headers,
+                      body: JSON.stringify(payload),
+                    });
+                    if (!resp.ok) {
+                      const txt = await resp.text();
+                      alert(`Error ${resp.status}: ${txt}`);
+                      return;
+                    }
+                    alert("Usuario actualizado");
+                    setEditingId(null);
+                  } catch (e) {
+                    console.error(e);
+                    alert("Error al actualizar");
                   }
-                  alert("Usuario actualizado");
-                  setEditingId(null);
-                } catch (e) {
-                  console.error(e);
-                  alert("Error al actualizar");
-                }
-              }}
-            >
-              Guardar
-            </MDButton>
-          </DialogActions>
-        </Dialog>
-        <MDBox display="flex" justifyContent="space-between" alignItems="center" p={2}>
-          <MDTypography variant="h6">Catálogo de Médicos</MDTypography>
-          <MDButton variant="contained" color="info" onClick={() => window.location.reload()}>
-            Refrescar
-          </MDButton>
-        </MDBox>
-        <MDBox p={2}>
-          <DataTable
-            table={table}
-            entriesPerPage={{ defaultValue: 10, entries: [5, 10, 15] }}
-            canSearch
-            showTotalEntries
-          />
-        </MDBox>
-      </Card>
+                }}
+              >
+                Guardar
+              </MDButton>
+            </DialogActions>
+          </Dialog>
+          <MDBox display="flex" justifyContent="center" alignItems="center" p={2}>
+            <MDBox flexGrow={1} textAlign="center">
+              <MDTypography variant="h6" sx={{ fontWeight: 700, mt: 4 }}>
+                Catálogo de Médicos
+              </MDTypography>
+            </MDBox>
+          </MDBox>
+          <MDBox p={2}>
+            <MDBox mb={2} display="flex" justifyContent={{ xs: "center", md: "flex-end" }}>
+              {/* keep search near table controls: DataTable already shows search; this keeps Refresh visually aligned */}
+            </MDBox>
+            <DataTable
+              table={table}
+              entriesPerPage={{ defaultValue: 10, entries: [5, 10, 15] }}
+              canSearch
+              showTotalEntries
+              pagination={{ variant: "contained", color: "info" }}
+              noEndBorder={false}
+              isSorted
+            />
+          </MDBox>
+        </Card>
+      </MDBox>
     </MDBox>
   );
 }
