@@ -12,6 +12,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class CitaService {
@@ -42,7 +46,26 @@ public class CitaService {
     }
 
     public List<BarrioCitaCount> obtenerBarriosMasSolicitados(){
-        return citaRepository.obtenerBarriosMasSolicitados();
+        List<Cita> citas = (List<Cita>) citaRepository.findAll();
+
+        Map<String, Long> agrupado = citas.stream()
+            .map(Cita::getDireccion)
+            .filter(Objects::nonNull)
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .map(s -> {
+                String[] partes = s.split(",");
+                if (partes.length >= 4) {
+                    return partes[3].trim();
+                }
+                return s; // fallback: use full direccion if no 4º campo
+            })
+            .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
+        return agrupado.entrySet().stream()
+            .map(e -> new BarrioCitaCount(e.getKey(), e.getValue()))
+            .sorted((a, b) -> b.getCantidadSolicitudes().compareTo(a.getCantidadSolicitudes()))
+            .collect(Collectors.toList());
     }
 
     public List<CitaMesCount> obtenerCitasPorMes(Integer anio) {
@@ -89,7 +112,27 @@ public class CitaService {
 
 
     public List<CitaTipoCount> obtenerMotivosConsultaMasFrecuentes() {
-        return citaRepository.obtenerMotivosConsultaMasFrecuentes();
+        List<Cita> citas = (List<Cita>) citaRepository.findAll();
+
+        Map<String, Long> agrupado = citas.stream()
+            .map(Cita::getMotivo_consulta)
+            .filter(Objects::nonNull)
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .flatMap(s -> java.util.Arrays.stream(s.split(",")))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .map(s -> {
+                String lower = s.toLowerCase();
+                if (lower.length() == 0) return lower;
+                return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+            })
+            .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
+        return agrupado.entrySet().stream()
+            .map(e -> new CitaTipoCount(e.getKey(), e.getValue()))
+            .sorted((a, b) -> b.getCantidad().compareTo(a.getCantidad()))
+            .collect(java.util.stream.Collectors.toList());
     }
 
     public CitaTipoCount obtenerTipoCitaMasSolicitado() {

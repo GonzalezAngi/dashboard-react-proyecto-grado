@@ -382,6 +382,35 @@ function StatisticsCards({
     };
   }, [appointmentsPerMonth]);
 
+  const consultationReasonsChart = useMemo(() => {
+    const TOP_N = 8;
+    const maxLabelLength = 30;
+    const rows = Array.isArray(consultationReasons) ? consultationReasons : [];
+
+    const sorted = [...rows].sort((a, b) => b.count - a.count);
+    const top = sorted.slice(0, TOP_N);
+    const rest = sorted.slice(TOP_N);
+    const restSum = rest.reduce((s, r) => s + (Number(r.count) || 0), 0);
+
+    const finalList = [...top];
+    if (restSum > 0) {
+      finalList.push({ name: "Otros", count: restSum });
+    }
+
+    const labels = finalList.map((r) =>
+      r.name && r.name.length > maxLabelLength ? r.name.slice(0, maxLabelLength - 1) + "…" : r.name
+    );
+
+    const fullLabels = finalList.map((r) => r.name);
+    const data = finalList.map((r) => Number(r.count) || 0);
+
+    const exportRows = finalList.map((r) => ({ name: r.name, count: Number(r.count) || 0 }));
+
+    return { labels, fullLabels, data, exportRows };
+  }, [consultationReasons]);
+
+  const consultationPalette = ["#4a5568", "#6b7280", "#9ca3af", "#cbd5e1", "#2c7a7b", "#4f7cac"];
+
   return (
     <MDBox
       display="grid"
@@ -615,32 +644,66 @@ function StatisticsCards({
         subtitle="Razones de atención más repetidas"
         filePrefix="motivos-consulta"
         sheetName="Motivos de consulta"
-        exportRows={consultationReasons}
+        exportRows={consultationReasonsChart.exportRows}
         toneKey="consultationReasons"
         span={4}
         minHeight={320}
       >
         <Bar
           data={{
-            labels: consultationReasons.map((reason) => reason.name),
+            labels: consultationReasonsChart.labels,
             datasets: [
               {
                 label: "Consultas",
-                data: consultationReasons.map((reason) => reason.count),
-                backgroundColor: "#4a5568",
+                data: consultationReasonsChart.data,
+                backgroundColor: consultationReasonsChart.labels.map(
+                  (_, i) => consultationPalette[i % consultationPalette.length]
+                ),
                 borderRadius: 10,
                 borderSkipped: false,
+                maxBarThickness: 20,
+                categoryPercentage: 0.78,
+                barPercentage: 0.9,
               },
             ],
           }}
-          options={{ indexAxis: "y", responsive: true, maintainAspectRatio: false }}
+          options={{
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { right: 24 } },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  title: (items) =>
+                    items?.[0] ? consultationReasonsChart.fullLabels[items[0].dataIndex] : "",
+                  label: (context) => {
+                    const v = Number(context.parsed?.x || 0);
+                    return `${v.toLocaleString("es-CO")} consultas`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: { precision: 0, color: "#6b7280" },
+                grid: { color: "rgba(15, 23, 42, 0.06)" },
+              },
+              y: {
+                grid: { display: false },
+                ticks: { color: "#374151", autoSkip: false },
+              },
+            },
+          }}
           plugins={[barValueLabelsPlugin]}
         />
       </ChartCard>
 
       <ChartCard
-        title="Tipo de consulta mas solicitada"
-        subtitle="Canal de atencion preferido"
+        title="Tipo de consulta más solicitada"
+        subtitle="Canal de atención preferido"
         filePrefix="tipo-consulta"
         sheetName="Tipo de consulta"
         exportRows={consultationTypes}
@@ -648,25 +711,52 @@ function StatisticsCards({
         span={4}
         minHeight={320}
       >
-        <Doughnut
-          data={{
-            labels: consultationTypes.map((type) => type.name),
-            datasets: [
-              {
-                data: consultationTypes.map((type) => type.count),
-                backgroundColor: ["#319795", "#63b3ed", "#7f9cf5"],
-                borderWidth: 0,
-              },
-            ],
+        <MDBox
+          sx={{
+            height: 260,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            mx: "auto",
           }}
-          options={{ responsive: true, maintainAspectRatio: false, cutout: "60%" }}
-          plugins={[doughnutValueLabelsPlugin]}
-        />
+        >
+          <Doughnut
+            data={{
+              labels: consultationTypes.map((type) => type.name),
+              datasets: [
+                {
+                  data: consultationTypes.map((type) => type.count),
+                  backgroundColor: ["#319795", "#63b3ed", "#7f9cf5"],
+                  borderWidth: 0,
+                },
+              ],
+            }}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: "60%",
+              plugins: {
+                legend: {
+                  display: true,
+                  position: "top",
+                  align: "center",
+                  labels: {
+                    usePointStyle: true,
+                    boxWidth: 10,
+                    boxHeight: 10,
+                    color: "#4b5563",
+                  },
+                },
+              },
+            }}
+            plugins={[doughnutValueLabelsPlugin]}
+          />
+        </MDBox>
       </ChartCard>
 
       <ChartCard
-        title="Enfermedades mas registradas"
-        subtitle="Motivos clinicos mas comunes"
+        title="Medios de pago más solicitados"
+        subtitle="Métodos de pago preferidos por los pacientes"
         filePrefix="enfermedades"
         sheetName="Enfermedades"
         exportRows={diseases}
@@ -674,33 +764,47 @@ function StatisticsCards({
         span={4}
         minHeight={320}
       >
-        <Pie
-          data={{
-            labels: diseases.map((d) => d.name),
-            datasets: [
-              {
-                data: diseases.map((d) => d.count),
-                backgroundColor: ["#c85a99", "#f5dbe4", "#e7c9d7", "#f9eef3"],
-                borderColor: "#ffffff",
-                borderWidth: 2,
-              },
-            ],
+        <MDBox
+          sx={{
+            height: 260,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            mx: "auto",
           }}
-          options={{
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: "right",
-                labels: {
-                  usePointStyle: true,
-                  boxWidth: 10,
-                  boxHeight: 10,
+        >
+          <Pie
+            data={{
+              labels: diseases.map((d) => d.name),
+              datasets: [
+                {
+                  data: diseases.map((d) => d.count),
+                  backgroundColor: ["#c85a99", "#f5dbe4", "#e7c9d7", "#f9eef3"],
+                  borderColor: "#ffffff",
+                  borderWidth: 2,
+                },
+              ],
+            }}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: true,
+                  position: "top",
+                  align: "center",
+                  labels: {
+                    usePointStyle: true,
+                    boxWidth: 10,
+                    boxHeight: 10,
+                    color: "#4b5563",
+                  },
                 },
               },
-            },
-          }}
-        />
+            }}
+            plugins={[doughnutValueLabelsPlugin]}
+          />
+        </MDBox>
       </ChartCard>
     </MDBox>
   );
