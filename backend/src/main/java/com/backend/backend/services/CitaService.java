@@ -106,8 +106,55 @@ public class CitaService {
             .collect(java.util.stream.Collectors.toList());
     }
 
+    public List<CitaMesEstadoCount> obtenerCitasPorMesPorEstado(Integer anio) {
+        List<com.backend.backend.DTO.CitaMesEstadoCountProjection> filas = citaRepository.obtenerCitasPorMesPorEstado(anio);
+        List<CitaMesEstadoCount> resultados = new ArrayList<>();
+
+        java.util.List<Integer> aniosBuscados = new java.util.ArrayList<>();
+        if (anio != null) {
+            aniosBuscados.add(anio);
+        } else {
+            aniosBuscados = filas.stream()
+                .map(com.backend.backend.DTO.CitaMesEstadoCountProjection::getAnio)
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+            if (aniosBuscados.isEmpty()) {
+                aniosBuscados.add(java.time.Year.now().getValue());
+            }
+        }
+
+        for (Integer a : aniosBuscados) {
+            for (int i = 1; i <= 12; i++) {
+                final int mes = i;
+                // filter all projections matching year and month, add each estado as separate rows
+                List<com.backend.backend.DTO.CitaMesEstadoCountProjection> matches = filas.stream()
+                    .filter(f -> f.getAnio().equals(a) && f.getMes() == mes)
+                    .collect(java.util.stream.Collectors.toList());
+
+                if (matches.isEmpty()) {
+                    // keep an empty row with Sin estado = 0? skip to keep output compact
+                    continue;
+                }
+
+                for (com.backend.backend.DTO.CitaMesEstadoCountProjection m : matches) {
+                    String estado = m.getEstado() == null || m.getEstado().trim().isEmpty() ? "Sin estado" : m.getEstado().trim();
+                    resultados.add(new CitaMesEstadoCount(a, mes, estado, m.getCantidad()));
+                }
+            }
+        }
+
+        return resultados;
+    }
+
     public List<CitaTipoCount> obtenerTiposCitaMasSolicitados() {
         return citaRepository.obtenerTiposCitaMasSolicitados();
+    }
+
+    public List<com.backend.backend.DTO.CitaEstadoCount> obtenerCitasPorEstado() {
+        List<com.backend.backend.DTO.CitaEstadoCountProjection> filas = citaRepository.obtenerCitasPorEstado();
+        return filas.stream()
+                .map(p -> new com.backend.backend.DTO.CitaEstadoCount(p.getEstado() == null || p.getEstado().trim().isEmpty() ? "Sin estado" : p.getEstado().trim(), p.getCantidad()))
+                .collect(java.util.stream.Collectors.toList());
     }
 
 

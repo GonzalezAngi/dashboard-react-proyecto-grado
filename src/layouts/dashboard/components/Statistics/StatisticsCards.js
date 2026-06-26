@@ -382,6 +382,126 @@ function StatisticsCards({
     };
   }, [appointmentsPerMonth]);
 
+  const appointmentsStatusChartData = useMemo(() => {
+    // Build stacked datasets: for each year, create a stack containing datasets per status.
+    const monthLabels = [
+      "Enero",
+      "Febrero",
+      "Marzo",
+      "Abril",
+      "Mayo",
+      "Junio",
+      "Julio",
+      "Agosto",
+      "Septiembre",
+      "Octubre",
+      "Noviembre",
+      "Diciembre",
+    ];
+
+    const rows = Array.isArray(appointmentsPerMonth) ? appointmentsPerMonth : [];
+
+    // Collect years and statuses
+    const years = Array.from(new Set(rows.map((r) => r.year))).sort((a, b) => {
+      const na = Number(a);
+      const nb = Number(b);
+      if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+      return a.localeCompare(b);
+    });
+
+    const statusSet = new Set();
+    rows.forEach((r) => {
+      const statuses = r.statuses || {};
+      Object.keys(statuses).forEach((s) => statusSet.add(s));
+    });
+    const statuses = Array.from(statusSet);
+
+    const statusPalette = [
+      "#2b6cb0",
+      "#38a169",
+      "#d69e2e",
+      "#e53e3e",
+      "#6b46c1",
+      "#319795",
+      "#4a5568",
+      "#e76f51",
+    ];
+
+    const datasets = [];
+
+    years.forEach((year) => {
+      statuses.forEach((status, sIdx) => {
+        const data = monthLabels.map((_, monthOffset) => {
+          const monthIndex = monthOffset + 1;
+          return rows
+            .filter((r) => String(r.year) === String(year) && Number(r.monthIndex) === monthIndex)
+            .reduce((sum, r) => sum + (Number(r.statuses?.[status] || 0) || 0), 0);
+        });
+
+        datasets.push({
+          label: `${status} - ${year}`,
+          data,
+          backgroundColor: statusPalette[sIdx % statusPalette.length],
+          stack: String(year),
+        });
+      });
+    });
+
+    const exportRows = rows.map((r) => ({
+      year: r.year,
+      month: r.month,
+      monthIndex: r.monthIndex,
+      ...r.statuses,
+    }));
+
+    return {
+      labels: monthLabels,
+      datasets,
+      exportRows,
+    };
+  }, [appointmentsPerMonth]);
+
+  const appointmentStateTotals = useMemo(() => {
+    const rows = Array.isArray(appointmentsPerMonth) ? appointmentsPerMonth : [];
+    const totalsMap = rows.reduce((acc, r) => {
+      const statuses = r.statuses || {};
+      Object.keys(statuses).forEach((s) => {
+        acc[s] = (acc[s] || 0) + Number(statuses[s] || 0);
+      });
+      return acc;
+    }, {});
+
+    // Convert to array and sort descending by count
+    const entries = Object.keys(totalsMap).map((k) => ({
+      estado: k,
+      count: Number(totalsMap[k] || 0),
+    }));
+    entries.sort((a, b) => b.count - a.count);
+
+    const TOP_N = 8;
+    const top = entries.slice(0, TOP_N);
+    const rest = entries.slice(TOP_N);
+    const restSum = rest.reduce((s, e) => s + e.count, 0);
+
+    const final = [...top];
+    if (restSum > 0) final.push({ estado: "Otros", count: restSum });
+
+    // If no estado values were found, show a single placeholder with total sum
+    if (final.length === 0) {
+      const totalSum = rows.reduce((s, r) => s + (Number(r.count) || 0), 0);
+      final.push({ estado: "Sin estado", count: totalSum });
+    }
+
+    const labels = final.map((e) => e.estado);
+    const data = final.map((e) => e.count);
+    const exportRows = final.map((e) => ({
+      estado: e.estado,
+      count: e.count,
+    }));
+
+    return { labels, data, exportRows };
+  }, [appointmentsPerMonth]);
+
   const consultationReasonsChart = useMemo(() => {
     const TOP_N = 8;
     const maxLabelLength = 30;
@@ -509,35 +629,7 @@ function StatisticsCards({
         />
       </ChartCard>
 
-      <ChartCard
-        title="Usuarios activos por mes"
-        subtitle="Tendencia mensual de usuarios en la plataforma"
-        filePrefix="usuarios-activos-por-mes"
-        sheetName="Usuarios activos por mes"
-        exportRows={monthlyUsers}
-        toneKey="monthlyUsers"
-        span={7}
-        minHeight={330}
-      >
-        <Line
-          data={{
-            labels: monthlyUsers.map((m) => m.month),
-            datasets: [
-              {
-                label: "Usuarios activos",
-                data: monthlyUsers.map((m) => m.count),
-                borderColor: "#3182ce",
-                backgroundColor: "rgba(49, 130, 206, 0.16)",
-                fill: true,
-                tension: 0.3,
-                pointRadius: 4,
-                pointBackgroundColor: "#3182ce",
-              },
-            ],
-          }}
-          options={{ responsive: true, maintainAspectRatio: false }}
-        />
-      </ChartCard>
+      {/* Usuarios activos por mes - removed at user's request */}
 
       <ChartCard
         title="Cantidad de citas por mes y año"
@@ -634,6 +726,37 @@ function StatisticsCards({
             },
           }}
           plugins={[barValueLabelsPlugin]}
+        />
+      </ChartCard>
+
+      <ChartCard
+        title="Cantidad de citas por estado"
+        subtitle="Conteo total por estado"
+        filePrefix="citas-por-estado"
+        sheetName="Citas por estado"
+        exportRows={appointmentStateTotals.exportRows}
+        toneKey="appointmentsPerMonth"
+        span={6}
+        minHeight={360}
+      >
+        <Doughnut
+          data={{
+            labels: appointmentStateTotals.labels,
+            datasets: [
+              {
+                data: appointmentStateTotals.data,
+                backgroundColor: appointmentStateTotals.labels.map(
+                  (_, i) => consultationPalette[i % consultationPalette.length]
+                ),
+              },
+            ],
+          }}
+          options={{
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: "top", align: "start" } },
+          }}
+          plugins={[doughnutValueLabelsPlugin]}
         />
       </ChartCard>
 

@@ -26,7 +26,7 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 
 // Overview page components
-import Header from "layouts/home/components/Header";
+import Header from "./components/Header";
 
 function Overview() {
   return (

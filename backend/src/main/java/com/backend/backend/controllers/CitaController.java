@@ -109,9 +109,24 @@ public class CitaController {
         return citaService.obtenerCitasPorMes(anio);
     }
 
+    @GetMapping("/citas-por-mes-por-estado")
+    public List<com.backend.backend.DTO.CitaMesEstadoCount> obtenerCitasPorMesPorEstado(@RequestParam(required = false) Integer anio) {
+        return citaService.obtenerCitasPorMesPorEstado(anio);
+    }
+
     @GetMapping("/citas-por-anio")
     public List<com.backend.backend.DTO.CitaAnioCount> obtenerCitasPorAnio() {
         return citaService.obtenerCitasPorAnio();
+    }
+
+    @GetMapping("/citas-por-estado")
+    public List<com.backend.backend.DTO.CitaEstadoCount> obtenerCitasPorEstado() {
+        return citaService.obtenerCitasPorEstado();
+    }
+
+    @GetMapping("/estadisticas/citas-por-estado")
+    public List<com.backend.backend.DTO.CitaEstadoCount> obtenerCitasPorEstadoAlt() {
+        return citaService.obtenerCitasPorEstado();
     }
 
     @GetMapping("/tipos-cita-mas-solicitados")

@@ -200,16 +200,16 @@ function Dashboard() {
         const payload = await response.json();
         const normalized = Array.isArray(payload)
           ? payload
-              .map((item) => ({
-                name:
-                  pickFirstNonEmpty(item, [
-                    "tipoConsulta",
-                    "tipo_consulta",
-                    "tipo",
-                    "nombre",
-                  ]) || "Sin tipo",
-                count: Number(item?.cantidad ?? item?.cantidadSolicitudes ?? item?.count) || 0,
-              }))
+              .map((item) => {
+                const name = pickFirstNonEmpty(item, [
+                  "tipoConsulta",
+                  "tipo_consulta",
+                  "tipo",
+                  "nombre",
+                ]) || "Sin tipo";
+                const count = Number(item?.cantidad ?? item?.cantidadSolicitudes ?? item?.count) || 0;
+                return { name, count };
+              })
               .filter((item) => item.name)
           : [];
 
@@ -236,16 +236,16 @@ function Dashboard() {
         const payload = await response.json();
         const normalized = Array.isArray(payload)
           ? payload
-              .map((item) => ({
-                name:
-                  pickFirstNonEmpty(item, [
-                    "tipoConsulta",
-                    "tipo_consulta",
-                    "motivo",
-                    "nombre",
-                  ]) || "Sin motivo",
-                count: Number(item?.cantidad ?? item?.count ?? item?.cantidadSolicitudes) || 0,
-              }))
+              .map((item) => {
+                const name = pickFirstNonEmpty(item, [
+                  "tipoConsulta",
+                  "tipo_consulta",
+                  "motivo",
+                  "nombre",
+                ]) || "Sin motivo";
+                const count = Number(item?.cantidad ?? item?.count ?? item?.cantidadSolicitudes) || 0;
+                return { name, count };
+              })
               .filter((item) => item.name)
           : [];
 
@@ -401,17 +401,57 @@ function Dashboard() {
 
         if (Number.isNaN(count)) return accumulator;
 
+        // detect status / estado fields and normalize (support objects and multiple field names)
+        const extractStatus = (it) => {
+          const candidates = [
+            it?.estado,
+            it?.state,
+            it?.status,
+            it?.estadoCita,
+            it?.estado_solicitud,
+            it?.nombreEstado,
+            it?.estado?.nombre,
+            it?.estado?.name,
+            it?.status?.name,
+            it?.status?.nombre,
+            it?.estado?.label,
+            it?.status?.label,
+          ];
+
+          for (const cand of candidates) {
+            if (cand === null || cand === undefined) continue;
+            if (typeof cand === "object") {
+              const nested = cand?.nombre || cand?.name || cand?.label || cand?.estado;
+              if (nested && String(nested).trim() !== "") return String(nested).trim();
+              continue;
+            }
+
+            const s = String(cand).trim();
+            if (s !== "") return s;
+          }
+
+          return null;
+        };
+
+        const detectedStatus = extractStatus(item);
+        const status = detectedStatus || "Sin estado";
+
         const key = `${year}-${monthIndex}`;
         const previous = accumulator.get(key);
 
         if (previous) {
           previous.count += count;
+          previous.statuses = previous.statuses || {};
+          previous.statuses[status] = (previous.statuses[status] || 0) + count;
         } else {
+          const statuses = {};
+          statuses[status] = count;
           accumulator.set(key, {
             year,
             month: MONTH_LABELS[monthIndex - 1],
             monthIndex,
             count,
+            statuses,
           });
         }
 
@@ -454,6 +494,7 @@ function Dashboard() {
           : undefined;
 
         const endpointCandidates = [
+          `${apiBaseUrl}/cita/v1/citas-por-mes-por-estado`,
           `${apiBaseUrl}/cita/v1/citas-por-mes`,
           `${apiBaseUrl}/cita/v1/solicitudes-por-mes`,
           `${apiBaseUrl}/cita/v1/solicitudes/mensual`,
@@ -469,6 +510,20 @@ function Dashboard() {
             }
 
             const payload = await response.json();
+            // Debug: log endpoint and a small preview of payload to help trace "Sin estado" issues
+            try {
+              // avoid huge logs, show first 10 items when array
+              if (Array.isArray(payload)) {
+                console.debug(
+                  `[Dashboard] fetched ${endpoint} -> array(${payload.length})`,
+                  payload.slice(0, 10)
+                );
+              } else {
+                console.debug(`[Dashboard] fetched ${endpoint} ->`, payload);
+              }
+            } catch (err) {
+              console.debug(`[Dashboard] fetched ${endpoint} -> (unable to preview payload)`, err);
+            }
             const normalized = normalizeAppointments(payload);
 
             // Only accept when at least one row was parsed correctly.
@@ -553,7 +608,14 @@ function Dashboard() {
     return () => {
       window.__MEDIHOME_EXPORT_DATA__ = null;
     };
-  }, [specialties, neighborhoods, appointmentsPerMonth, diseases, consultationReasons, consultationTypes]);
+  }, [
+    specialties,
+    neighborhoods,
+    appointmentsPerMonth,
+    diseases,
+    consultationReasons,
+    consultationTypes,
+  ]);
 
   return (
     <DashboardLayout>

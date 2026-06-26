@@ -43,6 +43,27 @@ public interface CitaRepository extends CrudRepository<Cita, Integer> {
     List<CitaMesCountProjection> obtenerCitasPorMes(@Param("anio") Integer anio);
 
     @Query(value = """
+        SELECT YEAR(fecha_registro) AS anio,
+               MONTH(fecha_registro) AS mes,
+               TRIM(COALESCE(estado, '')) AS estado,
+               COUNT(id) AS cantidad
+        FROM citas
+        WHERE fecha_registro IS NOT NULL AND (:anio IS NULL OR YEAR(fecha_registro) = :anio)
+        GROUP BY YEAR(fecha_registro), MONTH(fecha_registro), TRIM(COALESCE(estado, ''))
+        ORDER BY YEAR(fecha_registro), MONTH(fecha_registro)
+        """, nativeQuery = true)
+    List<CitaMesEstadoCountProjection> obtenerCitasPorMesPorEstado(@Param("anio") Integer anio);
+
+    @Query(value = """
+        SELECT TRIM(COALESCE(estado, '')) AS estado, COUNT(id) AS cantidad
+        FROM citas
+        WHERE (:includeEmpty IS NOT TRUE) IS NULL OR 1=1
+        GROUP BY TRIM(COALESCE(estado, ''))
+        ORDER BY COUNT(id) DESC
+        """, nativeQuery = true)
+    List<CitaEstadoCountProjection> obtenerCitasPorEstado();
+
+    @Query(value = """
         SELECT YEAR(fecha_registro) AS anio, COUNT(id) AS cantidad
         FROM citas
         WHERE fecha_registro IS NOT NULL
